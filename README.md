@@ -139,6 +139,11 @@ Example:
     - Entity names
     - Entity types
     - Observation content
+  - Advanced relation-specific queries:
+    - `relations [entity]`: Find all relations where entity is source or target
+    - `from [entity]`: Find all outgoing relations from entity
+    - `to [entity]`: Find all incoming relations to entity
+    - `type [relationType]`: Find all relations of a specific type
   - Returns matching entities and their relations
 
 - **open_nodes**
@@ -148,6 +153,38 @@ Example:
     - Requested entities
     - Relations between requested entities
   - Silently skips non-existent nodes
+
+## Enhanced Relation Queries
+
+This fork adds powerful relation query capabilities to the `search_nodes` function. You can now easily find relationships in your knowledge graph with specialized query patterns:
+
+### Examples:
+
+1. **Find all relations for an entity**
+   ```
+   search_nodes(query: "relations John_Smith")
+   ```
+   This returns all relations where "John_Smith" is either the source or target, along with all entities involved in these relations.
+
+2. **Find all outgoing relations from an entity**
+   ```
+   search_nodes(query: "from John_Smith")
+   ```
+   This returns all relations where "John_Smith" is the source, along with all target entities.
+
+3. **Find all incoming relations to an entity**
+   ```
+   search_nodes(query: "to Anthropic")
+   ```
+   This returns all relations where "Anthropic" is the target, along with all source entities.
+
+4. **Find all relations of a specific type**
+   ```
+   search_nodes(query: "type works_at")
+   ```
+   This returns all relations of type "works_at", along with all entities involved in those relations.
+
+These query patterns can be used directly by Claude when searching the knowledge graph, making relationship navigation more effective.
 
 ## Usage with Claude Desktop
 
