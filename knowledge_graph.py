@@ -234,10 +234,33 @@ def resolve_node_id(graph: dict, ref: str) -> Optional[str]:
     return None
 
 
-def resolve_dependencies(graph: dict, entry_id: str, include_optional: bool = False) -> list[str]:
+def _extract_optional_path(opt) -> str:
+    """Extract path from an optional entry (string or dict with 'path' key)."""
+    if isinstance(opt, str):
+        return opt
+    if isinstance(opt, dict):
+        return opt.get("path", "")
+    return ""
+
+
+def _optional_matches_task(opt, task: str) -> bool:
+    """Check if an optional's 'when' triggers match the task text."""
+    if not task:
+        return True  # No task filter = include all
+    if isinstance(opt, str):
+        return True  # String optionals always included
+    if isinstance(opt, dict) and "when" in opt:
+        keywords = [k.strip().lower() for k in opt["when"].split("|")]
+        task_lower = task.lower()
+        return any(kw in task_lower for kw in keywords)
+    return True  # No 'when' = always include
+
+
+def resolve_dependencies(graph: dict, entry_id: str, include_optional: bool = False, task: str = "") -> list[str]:
     """
     BFS traversal to collect all dependencies.
     Returns list of node IDs in dependency order (dependencies first).
+    When task is provided, only includes optional dependencies whose 'when' triggers match.
     """
     resolved = []
     visited = set()
@@ -270,7 +293,12 @@ def resolve_dependencies(graph: dict, entry_id: str, include_optional: bool = Fa
         
         if include_optional:
             for opt in node.get("optional", []):
-                opt_id = resolve_node_id(graph, opt)
+                if not _optional_matches_task(opt, task):
+                    continue
+                opt_path = _extract_optional_path(opt)
+                if not opt_path:
+                    continue
+                opt_id = resolve_node_id(graph, opt_path)
                 if opt_id and opt_id not in visited:
                     queue.append(opt_id)
         
@@ -350,12 +378,12 @@ def build_context(graph: dict, entry_id: str, workflow_id: Optional[str] = None,
             "metadata": {...}
         }
     """
-    # Start with entry point
-    all_deps = resolve_dependencies(graph, entry_id)
+    # Start with entry point (include optionals filtered by task)
+    all_deps = resolve_dependencies(graph, entry_id, include_optional=bool(task), task=task)
     
     # Add workflow if specified
     if workflow_id:
-        wf_deps = resolve_dependencies(graph, workflow_id)
+        wf_deps = resolve_dependencies(graph, workflow_id, include_optional=bool(task), task=task)
         for dep in wf_deps:
             if dep not in all_deps:
                 all_deps.append(dep)
